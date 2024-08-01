@@ -1,98 +1,98 @@
 import sys
 
-class No():
-    def __init__(self, estado, pai, acao):
-        self.estado = estado
-        self.pai = pai
-        self.acao = acao
+class Node():
+    def __init__(self, state, parent, action):
+        self.state = state
+        self.parent = parent
+        self.action = action
 
 
-class FronteiraPilha():
+class StackFrontier():
     def __init__(self):
-        self.fronteira = []
+        self.frontier = []
 
-    def adicionar(self, no):
-        self.fronteira.append(no)
+    def add(self, node):
+        self.frontier.append(node)
 
-    def contem_estado(self, estado):
-        return any(no.estado == estado for no in self.fronteira)
+    def contains_state(self, state):
+        return any(node.state == state for node in self.frontier)
 
-    def vazia(self):
-        return len(self.fronteira) == 0
+    def empty(self):
+        return len(self.frontier) == 0
 
-    def remover(self):
-        if self.vazia():
-            raise Exception("fronteira vazia")
+    def remove(self):
+        if self.empty():
+            raise Exception("empty frontier")
         else:
-            no = self.fronteira[-1]
-            self.fronteira = self.fronteira[:-1]
-            return no
+            node = self.frontier[-1]
+            self.frontier = self.frontier[:-1]
+            return node
 
 
-class FronteiraFila(FronteiraPilha):
+class QueueFrontier(StackFrontier):
 
-    def remover(self):
-        if self.vazia():
-            raise Exception("fronteira vazia")
+    def remove(self):
+        if self.empty():
+            raise Exception("empty frontier")
         else:
-            no = self.fronteira[0]
-            self.fronteira = self.fronteira[1:]
-            return no
+            node = self.frontier[0]
+            self.frontier = self.frontier[1:]
+            return node
 
-class Labirinto():
+class Maze():
 
-    def __init__(self, nome_arquivo):
+    def __init__(self, filename):
 
-        # Ler arquivo e definir altura e largura do labirinto
-        with open(nome_arquivo) as f:
-            conteudo = f.read()
+        # Read file and set height and width of maze
+        with open(filename) as f:
+            contents = f.read()
 
-        # Validar início e objetivo
-        if conteudo.count("A") != 1:
-            raise Exception("o labirinto deve ter exatamente um ponto de início")
-        if conteudo.count("B") != 1:
-            raise Exception("o labirinto deve ter exatamente um ponto de objetivo")
+        # Validate start and goal
+        if contents.count("A") != 1:
+            raise Exception("maze must have exactly one start point")
+        if contents.count("B") != 1:
+            raise Exception("maze must have exactly one goal")
 
-        # Determinar altura e largura do labirinto
-        conteudo = conteudo.splitlines()
-        self.altura = len(conteudo)
-        self.largura = max(len(linha) for linha in conteudo)
+        # Determine height and width of maze
+        contents = contents.splitlines()
+        self.height = len(contents)
+        self.width = max(len(line) for line in contents)
 
-        # Manter controle das paredes
-        self.paredes = []
-        for i in range(self.altura):
-            linha = []
-            for j in range(self.largura):
+        # Keep track of walls
+        self.walls = []
+        for i in range(self.height):
+            row = []
+            for j in range(self.width):
                 try:
-                    if conteudo[i][j] == "A":
-                        self.inicio = (i, j)
-                        linha.append(False)
-                    elif conteudo[i][j] == "B":
-                        self.objetivo = (i, j)
-                        linha.append(False)
-                    elif conteudo[i][j] == " ":
-                        linha.append(False)
+                    if contents[i][j] == "A":
+                        self.start = (i, j)
+                        row.append(False)
+                    elif contents[i][j] == "B":
+                        self.goal = (i, j)
+                        row.append(False)
+                    elif contents[i][j] == " ":
+                        row.append(False)
                     else:
-                        linha.append(True)
+                        row.append(True)
                 except IndexError:
-                    linha.append(False)
-            self.paredes.append(linha)
+                    row.append(False)
+            self.walls.append(row)
 
-        self.solucao = None
+        self.solution = None
 
 
-    def imprimir(self):
-        solucao = self.solucao[1] if self.solucao is not None else None
+    def print(self):
+        solution = self.solution[1] if self.solution is not None else None
         print()
-        for i, linha in enumerate(self.paredes):
-            for j, coluna in enumerate(linha):
-                if coluna:
-                    print("█", end="")
-                elif (i, j) == self.inicio:
+        for i, row in enumerate(self.walls):
+            for j, col in enumerate(row):
+                if col:
+                    print("â–ˆ", end="")
+                elif (i, j) == self.start:
                     print("A", end="")
-                elif (i, j) == self.objetivo:
+                elif (i, j) == self.goal:
                     print("B", end="")
-                elif solucao is not None and (i, j) in solucao:
+                elif solution is not None and (i, j) in solution:
                     print("*", end="")
                 else:
                     print(" ", end="")
@@ -100,130 +100,131 @@ class Labirinto():
         print()
 
 
-    def vizinhos(self, estado):
-        linha, coluna = estado
-        candidatos = [
-            ("cima", (linha - 1, coluna)),
-            ("baixo", (linha + 1, coluna)),
-            ("esquerda", (linha, coluna - 1)),
-            ("direita", (linha, coluna + 1))
+    def neighbors(self, state):
+        row, col = state
+        candidates = [
+            ("up", (row - 1, col)),
+            ("down", (row + 1, col)),
+            ("left", (row, col - 1)),
+            ("right", (row, col + 1))
         ]
 
-        resultado = []
-        for acao, (r, c) in candidatos:
-            if 0 <= r < self.altura and 0 <= c < self.largura and not self.paredes[r][c]:
-                resultado.append((acao, (r, c)))
-        return resultado
+        result = []
+        for action, (r, c) in candidates:
+            if 0 <= r < self.height and 0 <= c < self.width and not self.walls[r][c]:
+                result.append((action, (r, c)))
+        return result
 
 
-    def resolver(self):
-        """Encontra uma solução para o labirinto, se existir."""
+    def solve(self):
+        """Finds a solution to maze, if one exists."""
 
-        # Manter controle do número de estados explorados
-        self.num_explorados = 0
+        # Keep track of number of states explored
+        self.num_explored = 0
 
-        # Inicializar a fronteira apenas com a posição inicial
-        inicio = No(estado=self.inicio, pai=None, acao=None)
-        fronteira = FronteiraPilha()
-        fronteira.adicionar(inicio)
+        # Initialize frontier to just the starting position
+        start = Node(state=self.start, parent=None, action=None)
+        frontier = StackFrontier()
+        frontier.add(start)
 
-        # Inicializar um conjunto vazio de explorados
-        self.explorados = set()
+        # Initialize an empty explored set
+        self.explored = set()
 
-        # Continuar em loop até encontrar a solução
+        # Keep looping until solution found
         while True:
 
-            # Se não houver mais nada na fronteira, então não há caminho
-            if fronteira.vazia():
-                raise Exception("sem solução")
+            # If nothing left in frontier, then no path
+            if frontier.empty():
+                raise Exception("no solution")
 
-            # Escolher um nó da fronteira
-            no = fronteira.remover()
-            self.num_explorados += 1
+            # Choose a node from the frontier
+            node = frontier.remove()
+            self.num_explored += 1
 
-            # Se o nó é o objetivo, então temos uma solução
-            if no.estado == self.objetivo:
-                acoes = []
-                celulas = []
-                while no.pai is not None:
-                    acoes.append(no.acao)
-                    celulas.append(no.estado)
-                    no = no.pai
-                acoes.reverse()
-                celulas.reverse()
-                self.solucao = (acoes, celulas)
+            # If node is the goal, then we have a solution
+            if node.state == self.goal:
+                actions = []
+                cells = []
+                while node.parent is not None:
+                    actions.append(node.action)
+                    cells.append(node.state)
+                    node = node.parent
+                actions.reverse()
+                cells.reverse()
+                self.solution = (actions, cells)
                 return
 
-            # Marcar o nó como explorado
-            self.explorados.add(no.estado)
+            # Mark node as explored
+            self.explored.add(node.state)
 
-            # Adicionar vizinhos à fronteira
-            for acao, estado in self.vizinhos(no.estado):
-                if not fronteira.contem_estado(estado) and estado not in self.explorados:
-                    filho = No(estado=estado, pai=no, acao=acao)
-                    fronteira.adicionar(filho)
+            # Add neighbors to frontier
+            for action, state in self.neighbors(node.state):
+                if not frontier.contains_state(state) and state not in self.explored:
+                    child = Node(state=state, parent=node, action=action)
+                    frontier.add(child)
 
 
-    def salvar_imagem(self, nome_arquivo, mostrar_solucao=True, mostrar_explorados=False):
+    def output_image(self, filename, show_solution=True, show_explored=False):
         from PIL import Image, ImageDraw
-        tamanho_celula = 50
-        borda_celula = 2
+        cell_size = 50
+        cell_border = 2
 
-        # Criar um canvas em branco
+        # Create a blank canvas
         img = Image.new(
             "RGBA",
-            (self.largura * tamanho_celula, self.altura * tamanho_celula),
-            "preto"
+            (self.width * cell_size, self.height * cell_size),
+            "black"
         )
         draw = ImageDraw.Draw(img)
 
-        solucao = self.solucao[1] if self.solucao is not None else None
-        for i, linha in enumerate(self.paredes):
-            for j, coluna in enumerate(linha):
+        solution = self.solution[1] if self.solution is not None else None
+        for i, row in enumerate(self.walls):
+            for j, col in enumerate(row):
 
-                # Paredes
-                if coluna:
+                # Walls
+                if col:
                     fill = (40, 40, 40)
 
-                # Início
-                elif (i, j) == self.inicio:
+                # Start
+                elif (i, j) == self.start:
                     fill = (255, 0, 0)
 
-                # Objetivo
-                elif (i, j) == self.objetivo:
+                # Goal
+                elif (i, j) == self.goal:
                     fill = (0, 171, 28)
 
-                # Solução
-                elif solucao is not None e mostrar_solucao e (i, j) na solucao:
+                # Solution
+                elif solution is not None and show_solution and (i, j) in solution:
                     fill = (220, 235, 113)
 
-                # Explorados
-                elif solucao é not None e mostrar_explorados e (i, j) em self.explorados:
+                # Explored
+                elif solution is not None and show_explored and (i, j) in self.explored:
                     fill = (212, 97, 85)
 
-                # Célula vazia
+                # Empty cell
                 else:
                     fill = (237, 240, 252)
 
-                # Desenhar célula
+                # Draw cell
                 draw.rectangle(
-                    ([(j * tamanho_celula + borda_celula, i * tamanho_celula + borda_celula),
-                      ((j + 1) * tamanho_celula - borda_celula, (i + 1) * tamanho_celula - borda_celula)]),
+                    ([(j * cell_size + cell_border, i * cell_size + cell_border),
+                      ((j + 1) * cell_size - cell_border, (i + 1) * cell_size - cell_border)]),
                     fill=fill
                 )
 
-        img.save(nome_arquivo)
+        img.save(filename)
 
 
 if len(sys.argv) != 2:
-    sys.exit("Uso: python labirinto.py labirinto.txt")
+    sys.exit("Usage: python maze.py maze.txt")
 
-m = Labirinto(sys.argv[1])
-print("Labirinto:")
-m.imprimir()
-print("Resolvendo...")
-m.resolver()
-print("Estados Explorados:", m.num_explorados)
-print("Solução:")
-m.imprimir()
-m.salvar_imagem("labirinto.png", mostrar_explorados=True)
+m = Maze(sys.argv[1])
+print("Maze:")
+m.print()
+print("Solving...")
+m.solve()
+print("States Explored:", m.num_explored)
+print("Solution:")
+m.print()
+m.output_image("maze.png", show_explored=True)
+
